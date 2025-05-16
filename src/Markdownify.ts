@@ -1,4 +1,4 @@
-import { execFile } from "child_process";
+import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs";
@@ -6,7 +6,7 @@ import os from "os";
 import { fileURLToPath } from "url";
 import { expandHome } from "./utils.js";
 
-const execFileAsync = promisify(execFile);
+const execAsync = promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,18 +30,22 @@ export class Markdownify {
     );
 
     if (!fs.existsSync(markitdownPath)) {
-      throw new Error("markitdown executable not found");
+      throw new Error(`markitdown executable not found at ${markitdownPath}`);
     }
 
-    // Expand tilde in uvPath if present
-    const expandedUvPath = expandHome(uvPath);
+    //const expandedUvPath = this.expandHome(uvPath);
+    //const command = `"${expandedUvPath}" run "${markitdownPath}" "${filePath}"`;
 
-    // Use execFile to prevent command injection
-    const { stdout, stderr } = await execFileAsync(expandedUvPath, [
-      "run",
-      markitdownPath,
-      filePath,
-    ]);
+    // using the python executable from the venv directly instead of uv run
+    // This is more reliable across different environments and doesn't depend on uv being installed
+    const pythonPath = path.join(
+      venvPath,
+      process.platform === 'win32' ? 'Scripts' : 'bin',
+      process.platform === 'win32' ? 'python.exe' : 'python3'
+    );
+    const command = `"${pythonPath}" -m markitdown "${filePath}"`;
+    
+    const { stdout, stderr } = await execAsync(command);
 
     if (stderr) {
       throw new Error(`Error executing command: ${stderr}`);
