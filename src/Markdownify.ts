@@ -45,7 +45,9 @@ export class Markdownify {
     );
     const command = `"${pythonPath}" -W ignore -m markitdown "${filePath}"`;
     
-    const { stdout, stderr } = await execAsync(command);
+    const { stdout, stderr } = await execAsync(command, {
+      maxBuffer: 100 * 1024 * 1024, // 100MB buffer to handle large files
+    });
 
     if (stderr) {
       throw new Error(`Error executing command: ${stderr}`);
