@@ -15,6 +15,7 @@ const RequestPayloadSchema = z.object({
   url: z.string().optional(),
   projectRoot: z.string().optional(),
   uvPath: z.string().optional(),
+  preview: z.boolean().optional(),
 });
 
 export function createServer() {
@@ -98,11 +99,19 @@ export function createServer() {
             throw new Error("Tool not found");
         }
 
+        let contentText = result.text;
+        if (validatedArgs.preview) {
+          contentText = result.text.slice(0, 1000);
+          if (result.text.length > 1000) {
+            contentText += "\n... (content truncated, full content in file)";
+          }
+        }
+
         return {
           content: [
             { type: "text", text: `Output file: ${result.path}` },
             { type: "text", text: `Converted content:` },
-            { type: "text", text: result.text },
+            { type: "text", text: contentText },
           ],
           isError: false,
         };
