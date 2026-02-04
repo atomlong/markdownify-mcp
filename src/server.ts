@@ -16,6 +16,8 @@ const RequestPayloadSchema = z.object({
   projectRoot: z.string().optional(),
   uvPath: z.string().optional(),
   preview: z.boolean().optional(),
+  page_start: z.number().int().optional(),
+  page_end: z.number().int().optional(),
 });
 
 export function createServer() {
@@ -83,6 +85,8 @@ export function createServer() {
               filePath: validatedArgs.filepath,
               projectRoot: validatedArgs.projectRoot,
               uvPath: validatedArgs.uvPath || process.env.UV_PATH,
+              pageStart: validatedArgs.page_start,
+              pageEnd: validatedArgs.page_end,
             });
             break;
 

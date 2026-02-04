@@ -34,6 +34,14 @@ export const PDFToMarkdownTool = ToolSchema.parse({
         type: "string",
         description: "Absolute path of the PDF file to convert",
       },
+      page_start: {
+        type: "integer",
+        description: "Start page number (1-based, inclusive). Optional.",
+      },
+      page_end: {
+        type: "integer",
+        description: "End page number (1-based, inclusive). Optional.",
+      },
       ...PreviewProperty,
     },
     required: ["filepath"],

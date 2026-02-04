@@ -17,6 +17,39 @@ export type MarkdownResult = {
 };
 
 export class Markdownify {
+  private static getPythonPath(projectRoot: string): string {
+    const venvPath = path.join(projectRoot, ".venv");
+    return path.join(
+      venvPath,
+      process.platform === 'win32' ? 'Scripts' : 'bin',
+      process.platform === 'win32' ? 'python.exe' : 'python3'
+    );
+  }
+
+  private static async _splitPdf(
+    filePath: string,
+    projectRoot: string,
+    pageStart?: number,
+    pageEnd?: number
+  ): Promise<string> {
+    const pythonPath = this.getPythonPath(projectRoot);
+    const splitScriptPath = path.join(__dirname, "split_pdf.py");
+    const outputPdfPath = path.join(os.tmpdir(), `split_${Date.now()}.pdf`);
+
+    let args = `"${filePath}" "${outputPdfPath}"`;
+    if (pageStart !== undefined) args += ` --start ${pageStart}`;
+    if (pageEnd !== undefined) args += ` --end ${pageEnd}`;
+
+    const command = `"${pythonPath}" "${splitScriptPath}" ${args}`;
+    
+    const { stderr } = await execAsync(command);
+    if (stderr) {
+       console.warn(`Warning during PDF split: ${stderr}`);
+    }
+    
+    return outputPdfPath;
+  }
+
   private static async _markitdown(
     filePath: string,
     projectRoot: string,
@@ -33,16 +66,7 @@ export class Markdownify {
       throw new Error(`markitdown executable not found at ${markitdownPath}`);
     }
 
-    //const expandedUvPath = this.expandHome(uvPath);
-    //const command = `"${expandedUvPath}" run "${markitdownPath}" "${filePath}"`;
-
-    // using the python executable from the venv directly instead of uv run
-    // This is more reliable across different environments and doesn't depend on uv being installed
-    const pythonPath = path.join(
-      venvPath,
-      process.platform === 'win32' ? 'Scripts' : 'bin',
-      process.platform === 'win32' ? 'python.exe' : 'python3'
-    );
+    const pythonPath = this.getPythonPath(projectRoot);
     const command = `"${pythonPath}" -W ignore -m markitdown "${filePath}"`;
     
     const { stdout, stderr } = await execAsync(command, {
@@ -82,11 +106,15 @@ export class Markdownify {
     url,
     projectRoot = path.resolve(__dirname, ".."),
     uvPath = "~/.local/bin/uv",
+    pageStart,
+    pageEnd,
   }: {
     filePath?: string;
     url?: string;
     projectRoot?: string;
     uvPath?: string;
+    pageStart?: number;
+    pageEnd?: number;
   }): Promise<MarkdownResult> {
     try {
       let inputPath: string;
@@ -112,11 +140,25 @@ export class Markdownify {
         throw new Error("Either filePath or url must be provided");
       }
 
-      const text = await this._markitdown(inputPath, projectRoot, uvPath);
+      let processingPath = inputPath;
+      let isSplitTemporary = false;
+
+      // Handle PDF splitting if needed
+      if ((pageStart !== undefined || pageEnd !== undefined) && 
+          (inputPath.toLowerCase().endsWith(".pdf"))) {
+         processingPath = await this._splitPdf(inputPath, projectRoot, pageStart, pageEnd);
+         isSplitTemporary = true;
+      }
+
+      const text = await this._markitdown(processingPath, projectRoot, uvPath);
       const outputPath = await this.saveToTempFile(text);
 
       if (isTemporary) {
         fs.unlinkSync(inputPath);
+      }
+      
+      if (isSplitTemporary) {
+        fs.unlinkSync(processingPath);
       }
 
       return { path: outputPath, text };
