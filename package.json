@@ -14,7 +14,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && shx chmod +x dist/*.js",
+    "build": "tsc && shx chmod +x dist/*.js && shx cp src/split_pdf.py dist/split_pdf.py",
     "dev": "tsc --watch",
     "preinstall": "node preinstall.js",
     "start": "node dist/index.js",
