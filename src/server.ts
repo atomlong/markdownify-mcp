@@ -15,7 +15,7 @@ const RequestPayloadSchema = z.object({
   url: z.string().optional(),
   projectRoot: z.string().optional(),
   uvPath: z.string().optional(),
-  preview: z.boolean().optional(),
+  full_content: z.boolean().optional(),
   page_start: z.number().int().optional(),
   page_end: z.number().int().optional(),
 });
@@ -104,7 +104,7 @@ export function createServer() {
         }
 
         let contentText = result.text;
-        if (validatedArgs.preview) {
+        if (validatedArgs.full_content === false) {
           contentText = result.text.slice(0, 1000);
           if (result.text.length > 1000) {
             contentText += "\n... (content truncated, full content in file)";
